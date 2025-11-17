@@ -48,8 +48,8 @@ export function updateAction(player, deltaTime, gameMap, allPlayers) {
         case PLAYER_STATE.MOVING_TO_BUSHES:
             updateFollowPath(player, deltaTime, gameMap);
             if (atMoveTarget) {
-                if (player.state === PLAYER_STATE.MOVING_TO_LOGS) beginHarvestingLogs(player);
-                else if (player.state === PLAYER_STATE.MOVING_TO_BUSHES) beginHarvestingBushes(player);
+                if (player.state === PLAYER_STATE.MOVING_TO_LOGS) beginHarvestingLogs(player, allPlayers);
+                else if (player.state === PLAYER_STATE.MOVING_TO_BUSHES) beginHarvestingBushes(player, allPlayers);
             }
             break;
 
