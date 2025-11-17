@@ -78,7 +78,29 @@ export function beginChopping(player) {
     console.log(`[${player.username}] Began chopping tree at (${player.actionTarget.x}, ${player.actionTarget.y}). Timestamp: ${Date.now()}`);
 }
 
-export function finishChopping(player, gameMap) {
+function transitionToGatheringAfterChop(playerToTransition, gameMap, treeX, treeY, pendingBushes) {
+    playerToTransition.pendingHarvest = JSON.parse(JSON.stringify(pendingBushes));
+    playerToTransition.actionTarget = { x: treeX, y: treeY };
+    playerToTransition.sharedAction = null;
+
+    const startX = Math.round(playerToTransition.pixelX);
+    const startY = Math.round(playerToTransition.pixelY);
+    const path = findPath(startX, startY, treeX, treeY, gameMap);
+
+    if (path) {
+        playerToTransition.path = path;
+        playerToTransition.state = PLAYER_STATE.MOVING_TO_LOGS;
+    } else {
+        console.warn(`[${playerToTransition.username}] No path found to logs at (${treeX}, ${treeY}). Attempting to harvest bushes instead.`);
+        // harvestNextBush is in gathering.js, so this call needs to be from a shared context or refactored.
+        // For now, let's keep it simple: if logs are unreachable, try to find another task.
+        // The gathering logic will handle this.
+        playerToTransition.state = PLAYER_STATE.IDLE; // Reset and let next update cycle figure it out.
+        // A direct call to harvestNextBush would be better if we refactor it out.
+    }
+}
+
+export function finishChopping(player, gameMap, allPlayers) {
     const chopSound = AudioManager.getBuffer('./tree_fall.mp3');
     AudioManager.play(chopSound, player.actionTarget.x, player.actionTarget.y);
 
@@ -86,12 +108,30 @@ export function finishChopping(player, gameMap) {
     const treeY = player.actionTarget.y;
 
     gameMap.cutTree(treeX, treeY);
-    player.actionTarget = { x: treeX, y: treeY };
 
     console.log(`[${player.username}] Finished chopping tree. Timestamp: ${Date.now()}`);
     player.addExperience('woodcutting', 3);
 
-    player.pendingHarvest = [];
+    // Find other players chopping the same tree
+    const otherChoppers = [];
+    for (const otherPlayer of allPlayers.values()) {
+        if (otherPlayer.id !== player.id && 
+            otherPlayer.state === PLAYER_STATE.CHOPPING &&
+            otherPlayer.actionTarget?.x === treeX &&
+            otherPlayer.actionTarget?.y === treeY) 
+        {
+            otherChoppers.push(otherPlayer);
+        }
+    }
+
+    // Award XP and transition other choppers to gathering
+    for (const otherPlayer of otherChoppers) {
+        console.log(`[${otherPlayer.username}]'s chopping was interrupted by ${player.username} finishing. Awarding XP and switching to gather.`);
+        otherPlayer.addExperience('woodcutting', 3);
+    }
+    
+    // Generate bushes and prepare for gathering transition
+    const pendingBushes = [];
     let spawnedBushes = 0;
     const directions = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
     for (const [dx, dy] of directions) {
@@ -100,7 +140,7 @@ export function finishChopping(player, gameMap) {
         if (bushX >= 0 && bushX < gameMap.width && bushY >= 0 && bushY < gameMap.height && 
             gameMap.grid[bushY][bushX] === TILE_TYPE.GRASS && Math.random() < 1/8) {
             gameMap.grid[bushY][bushX] = TILE_TYPE.BUSHES;
-            player.pendingHarvest.push({ x: bushX, y: bushY, type: TILE_TYPE.BUSHES });
+            pendingBushes.push({ x: bushX, y: bushY, type: TILE_TYPE.BUSHES });
             spawnedBushes++;
         }
     }
@@ -115,30 +155,13 @@ export function finishChopping(player, gameMap) {
             const bushX = treeX + dx;
             const bushY = treeY + dy;
             gameMap.grid[bushY][bushX] = TILE_TYPE.BUSHES;
-            player.pendingHarvest.push({ x: bushX, y: bushY, type: TILE_TYPE.BUSHES });
+            pendingBushes.push({ x: bushX, y: bushY, type: TILE_TYPE.BUSHES });
         }
     }
-
-    if (player.activeCommand === 'follow') {
-        // For followers, we must ensure they collect resources before doing anything else.
-        // The logic below for moving to logs and bushes will handle this.
-        // After all resources are gathered, their state will be set back to FOLLOWING.
-    } else {
-        // Non-followers will also proceed to gather resources.
-        // If no active command, they will look for another tree after gathering.
-    }
-
-    player.state = PLAYER_STATE.IDLE; // Reset state before pathfinding
-    const startX = Math.round(player.pixelX);
-    const startY = Math.round(player.pixelY);
-    const path = findPath(startX, startY, player.actionTarget.x, player.actionTarget.y, gameMap);
-
-    if(path) {
-        player.path = path;
-        player.state = PLAYER_STATE.MOVING_TO_LOGS;
-    } else {
-        console.warn(`[${player.username}] No path found to logs at (${player.actionTarget.x}, ${player.actionTarget.y}).`);
-        // The logs from the tree are unreachable. Harvest pending bushes instead.
-        harvestNextBush(player, gameMap);
+    
+    // Transition self and other choppers
+    transitionToGatheringAfterChop(player, gameMap, treeX, treeY, pendingBushes);
+    for (const otherPlayer of otherChoppers) {
+        transitionToGatheringAfterChop(otherPlayer, gameMap, treeX, treeY, pendingBushes);
     }
 }

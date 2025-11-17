@@ -71,7 +71,7 @@ export function updateAction(player, deltaTime, gameMap, allPlayers) {
         case PLAYER_STATE.CHOPPING:
             player.actionTimer -= deltaTime;
             if (player.actionTimer <= 0) {
-                finishChopping(player, gameMap);
+                finishChopping(player, gameMap, allPlayers);
             } else if (Math.floor(player.actionTimer) % 2 === 0 && Math.floor(player.actionTimer + deltaTime) % 2 !== 0) {
                  const chopSound = AudioManager.getBuffer('./chop.mp3');
                  AudioManager.play(chopSound, player.pixelX, player.pixelY);
@@ -81,14 +81,14 @@ export function updateAction(player, deltaTime, gameMap, allPlayers) {
         case PLAYER_STATE.HARVESTING_LOGS:
             player.actionTimer -= deltaTime;
             if (player.actionTimer <= 0) {
-                finishHarvestingLogs(player, gameMap);
+                finishHarvestingLogs(player, gameMap, allPlayers);
             }
             break;
 
         case PLAYER_STATE.HARVESTING_BUSHES:
             player.actionTimer -= deltaTime;
             if (player.actionTimer <= 0) {
-                finishHarvestingBushes(player, gameMap);
+                finishHarvestingBushes(player, gameMap, allPlayers);
             }
             break;
     }

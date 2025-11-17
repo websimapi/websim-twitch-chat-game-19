@@ -45,6 +45,7 @@ export class Player {
         this.activeCommand = null;
         this.followTargetId = null;
         this.lastSearchPosition = null; // For gathering wander logic
+        this.sharedAction = null; // { target: {x, y}, participants: { id: startTime, ... } }
         this.skills = {
             woodcutting: [],
             gathering: []
@@ -124,6 +125,7 @@ export class Player {
             activeCommand: this.activeCommand,
             followTargetId: this.followTargetId,
             lastSearchPosition: this.lastSearchPosition,
+            sharedAction: this.sharedAction,
             skills: this.skills,
         };
     }
@@ -165,6 +167,7 @@ export class Player {
         this.activeCommand = state.activeCommand || null;
         this.followTargetId = state.followTargetId || null;
         this.lastSearchPosition = state.lastSearchPosition || null;
+        this.sharedAction = state.sharedAction || null;
 
         this.actionTarget = state.actionTarget || null; // Restore the action target
         this.state = state.state || PLAYER_STATE.IDLE;
