@@ -91,6 +91,15 @@ export function updateFollow(player, gameMap, allPlayers, deltaTime) {
     // Within range, so stop moving
     player.path = [];
 
+    // If there are pending resources to harvest from a previous action, do that first.
+    if (player.pendingHarvest.length > 0) {
+        // This can happen if the follower finishes chopping and is ready to gather,
+        // but this logic runs before the gathering state is initiated.
+        // We will let the gathering logic from other functions take priority.
+        // This check prevents re-initiating a new action while another is pending.
+        return;
+    }
+
     // Mimic target's actions
     if (WOODCUTTING_STATES.includes(targetPlayer.state)) {
         startChoppingCycle(player, gameMap);

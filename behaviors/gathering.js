@@ -73,13 +73,8 @@ export function finishHarvestingLogs(player, gameMap) {
     player.addExperience('gathering', 2);
     gameMap.grid[player.actionTarget.y][player.actionTarget.x] = TILE_TYPE.GRASS;
 
-    if (player.activeCommand === 'gather') {
-        startGatheringCycle(player, gameMap);
-    } else if (player.activeCommand === 'follow') {
-        player.state = PLAYER_STATE.FOLLOWING;
-    } else {
-        harvestNextBush(player, gameMap);
-    }
+    // After harvesting logs, always check for bushes before deciding the next major action.
+    harvestNextBush(player, gameMap);
 }
 
 export function harvestNextBush(player, gameMap) {
@@ -98,9 +93,13 @@ export function harvestNextBush(player, gameMap) {
             harvestNextBush(player, gameMap); // Try next bush
         }
     } else {
+        // No more bushes from the tree chop. Now, decide what to do next.
         if (player.activeCommand === 'follow') {
             player.state = PLAYER_STATE.FOLLOWING;
+        } else if (player.activeCommand === 'gather') {
+            startGatheringCycle(player, gameMap);
         } else {
+            // Default behavior (e.g., after !chop command is complete) is to find another tree.
             findAndMoveToTree(player, gameMap);
         }
     }
@@ -122,9 +121,8 @@ export function finishHarvestingBushes(player, gameMap) {
 
     if (player.activeCommand === 'gather') {
         startGatheringCycle(player, gameMap);
-    } else if (player.activeCommand === 'follow') {
-        player.state = PLAYER_STATE.FOLLOWING;
     } else {
+        // For both 'follow' and default commands, continue harvesting pending bushes.
         harvestNextBush(player, gameMap);
     }
 }

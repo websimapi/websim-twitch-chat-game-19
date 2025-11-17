@@ -120,8 +120,12 @@ export function finishChopping(player, gameMap) {
     }
 
     if (player.activeCommand === 'follow') {
-        player.state = PLAYER_STATE.FOLLOWING;
-        return;
+        // For followers, we must ensure they collect resources before doing anything else.
+        // The logic below for moving to logs and bushes will handle this.
+        // After all resources are gathered, their state will be set back to FOLLOWING.
+    } else {
+        // Non-followers will also proceed to gather resources.
+        // If no active command, they will look for another tree after gathering.
     }
 
     player.state = PLAYER_STATE.IDLE; // Reset state before pathfinding
